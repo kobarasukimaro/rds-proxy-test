@@ -1,0 +1,9 @@
+OWNER: <デプロイするリソースのOwner名>
+PJCD: <デプロイするリソースのPJCD名>
+SECURITY_GROUP: <Function に設定するSGのID。ファイル翻訳インスタンスにSSHできるSGを指定すること>
+SUBNET_A: <Function に設定するサブネットのID。ファイル翻訳インスタンスにSSHできるサブネットであること。また、Slackと通信するため、外に出れること>
+SUBNET_C: <Function に設定するサブネットのID。ファイル翻訳インスタンスにSSHできるサブネットであること。また、Slackと通信するため、外に出れること>
+DB_USER: 
+DB_PASSWORD: 
+DB_HOST: 
+DB_NAME: 

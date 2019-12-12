@@ -1,0 +1,6 @@
+.serverless
+cfn/*.json
+sls/conf/*.yml
+sls/conf/*.yaml
+sls/package-lock.json
+sls/node_modules

@@ -1,0 +1,300 @@
+---
+AWSTemplateFormatVersion: '2010-09-09'
+Description: RDS Proxy Test Stack
+Parameters:
+  # VPC Parameters
+  VpcCidrBlock:
+    Type: String
+    Description: Please input an IP range in VPC.
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/16
+  # Subnet Parameters
+  VpcSubnetCidrBlock1a:
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/24
+  VpcSubnetCidrBlock1c:
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/24
+  VpcSubnetCidrBlock1d:
+    Type: String
+    AllowedPattern: (\d{1,3})\.(\d{1,3})\.(\d{1,3})\.(\d{1,3})/24
+  RDSDBName:
+    Description: RDS database name
+    Type: String
+    MinLength: 1
+    MaxLength: 64
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription:
+      must begin with a letter and contain only alphanumeric
+      characters.
+  RDSMasterUsername:
+    Description: RDS master user
+    Type: String
+    MinLength: 1
+    MaxLength: 16
+    AllowedPattern: "[a-zA-Z][a-zA-Z0-9]*"
+    ConstraintDescription:
+      must begin with a letter and contain only alphanumeric
+      characters.
+  RDSPassword:
+    NoEcho: true
+    Description: RDS master password
+    Type: String
+    MinLength: "8"
+    MaxLength: "41"
+    AllowedPattern: "[!-/a-zA-Z0-9]*"
+    ConstraintDescription: must contain only alphanumeric characters.
+Resources:
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: !Ref VpcCidrBlock
+      EnableDnsSupport: true
+      EnableDnsHostnames: true
+      Tags:
+        - Key: Name
+          Value: proxy-test
+  PrivateSubnet1a:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref VPC
+      AvailabilityZone: ap-northeast-1a
+      CidrBlock: !Ref VpcSubnetCidrBlock1a
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: proxy-test-a
+  PrivateSubnet1c:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: ap-northeast-1c
+      CidrBlock: !Ref 'VpcSubnetCidrBlock1c'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: proxy-test-c
+  PrivateSubnet1d:
+    Type: AWS::EC2::Subnet
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref 'VPC'
+      AvailabilityZone: ap-northeast-1d
+      CidrBlock: !Ref 'VpcSubnetCidrBlock1d'
+      MapPublicIpOnLaunch: false
+      Tags:
+        - Key: Name
+          Value: proxy-test-d
+  PrivateRouteTable1a:
+    Type: AWS::EC2::RouteTable
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: proxy-test-a
+  PrivateRouteTable1c:
+    Type: AWS::EC2::RouteTable
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: proxy-test-c
+  PrivateRouteTable1d:
+    Type: AWS::EC2::RouteTable
+    DependsOn: VPC
+    Properties:
+      VpcId: !Ref 'VPC'
+      Tags:
+        - Key: Name
+          Value: proxy-test-d
+  # PrivateRoute1a:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref 'PrivateRouteTable1a'
+  #     DestinationCidrBlock: '0.0.0.0/0'
+  # PrivateRoute1c:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref 'PrivateRouteTable1c'
+  #     DestinationCidrBlock: '0.0.0.0/0'
+  # PrivateRoute1d:
+  #   Type: AWS::EC2::Route
+  #   Properties:
+  #     RouteTableId: !Ref 'PrivateRouteTable1d'
+  #     DestinationCidrBlock: '0.0.0.0/0'
+  PrivateSubnetRouteTableAssociation1a:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet1a'
+      RouteTableId: !Ref 'PrivateRouteTable1a'
+  PrivateSubnetRouteTableAssociation1c:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet1c'
+      RouteTableId: !Ref 'PrivateRouteTable1c'
+  PrivateSubnetRouteTableAssociation1d:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      SubnetId: !Ref 'PrivateSubnet1d'
+      RouteTableId: !Ref 'PrivateRouteTable1d'
+
+  SecurityGroupForLambda:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: SecurityGroupForLambda
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: proxy-test-sg-for-lambda
+  SecurityGroupForRDSProxy:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: SecurityGroupForRDSProxy
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "3306"
+          ToPort: "3306"
+          SourceSecurityGroupId: !Ref "SecurityGroupForLambda"
+          Description: from Proxy Test Lambda
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: proxy-test-sg-for-rds-proxy
+  SecurityGroupForRDS:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      VpcId: !Ref VPC
+      GroupDescription: SecurityGroupForRDS
+      SecurityGroupIngress:
+        - IpProtocol: tcp
+          FromPort: "3306"
+          ToPort: "3306"
+          SourceSecurityGroupId: !Ref "SecurityGroupForLambda"
+          Description: from Proxy Test Lambda
+        - IpProtocol: tcp
+          FromPort: "3306"
+          ToPort: "3306"
+          SourceSecurityGroupId: !Ref "SecurityGroupForRDSProxy"
+          Description: from RDS Proxy
+      SecurityGroupEgress:
+        - IpProtocol: "-1"
+          FromPort: "0"
+          ToPort: "65535"
+          CidrIp: "0.0.0.0/0"
+      Tags:
+        - Key: Name
+          Value: proxy-test-sg-for-rds
+  ProxyTestRDSMultiAZSubnetGroup:
+    Type: AWS::RDS::DBSubnetGroup
+    Properties:
+      DBSubnetGroupDescription: Enable RDS Multi-AZ access.
+      SubnetIds:
+        - !Ref PrivateSubnet1a
+        - !Ref PrivateSubnet1c
+        - !Ref PrivateSubnet1d
+  ProxyTestRDSClusterParameterGroup:
+    Type: AWS::RDS::DBClusterParameterGroup
+    Properties:
+      Parameters:
+        max_connections: 20
+      Family: aurora-mysql5.7
+      Description: Aurora Parameter group
+  ProxyTestRDSCluster:
+    Type: AWS::RDS::DBCluster
+    Properties:
+      BackupRetentionPeriod: 1
+      AvailabilityZones:
+        - ap-northeast-1a
+        - ap-northeast-1c
+        - ap-northeast-1d
+      MasterUsername: !Ref RDSMasterUsername
+      MasterUserPassword: !Ref RDSPassword
+      DatabaseName: !Ref RDSDBName
+      Engine: aurora-mysql
+      DBSubnetGroupName: !Ref ProxyTestRDSMultiAZSubnetGroup
+      VpcSecurityGroupIds:
+        - !Ref SecurityGroupForRDS
+      DBClusterParameterGroupName: !Ref ProxyTestRDSClusterParameterGroup
+  RDSDBInstanceA:
+    Type: AWS::RDS::DBInstance
+    Properties:
+      AvailabilityZone: ap-northeast-1a
+      DBSubnetGroupName: !Ref ProxyTestRDSMultiAZSubnetGroup
+      Engine: aurora-mysql
+      DBClusterIdentifier: !Ref ProxyTestRDSCluster
+      DBInstanceIdentifier: proxy-test-aurora-a
+      DBInstanceClass: db.t2.small
+      AutoMinorVersionUpgrade: false
+  # RDSSecret:
+  #   Type: AWS::SecretsManager::Secret
+  #   Properties:
+  #     Name: proxy-test-secret
+  #     Description: proxy-test-secret
+  #     SecretString: !Sub
+  #       - "{\"username\":\"${username}\",\"password\":\"${password}\",\"engine\":\"mysql\",\"host\":\"${host}\",\"port\":3306,\"dbname\":\"${dbname}\",\"dbClusterIdentifier\":\"${clusteridentifier}\"}"
+  #       - username: !Ref RDSMasterUsername
+  #         password: !Ref RDSPassword
+  #         host: !GetAtt ProxyTestRDSCluster.Endpoint.Address
+  #         dbname: !Ref RDSDBName
+  #         clusteridentifier: !Ref ProxyTestRDSCluster
+  # SecretRDSClusterAttachment:
+  #   Type: AWS::SecretsManager::SecretTargetAttachment
+  #   Properties:
+  #     SecretId: !Ref RDSSecret
+  #     TargetId: !Ref ProxyTestRDSCluster
+  #     TargetType: AWS::RDS::DBCluster
+  # SecretResourcePolicy: 
+  #   Type: AWS::SecretsManager::ResourcePolicy
+  #   Properties:
+  #     SecretId: !Ref RDSSecret 
+  #     ResourcePolicy: 
+  #       Version: "2012-10-17" 
+  #       Statement: 
+  #         -
+  #           Effect: "Allow"
+  #           Principal:
+  #             AWS: !Sub "arn:aws:iam::${AWS::AccountId}:root" 
+  #           Action: "secretsmanager:*" 
+  #           Resource: "*" 
+Outputs:
+  PrivateSubnet1a:
+    Value: !Ref PrivateSubnet1a
+    Export:
+      Name: PrivateSubnet1a
+  PrivateSubnet1c:
+    Value: !Ref PrivateSubnet1c
+    Export:
+      Name: PrivateSubnet1c
+  PrivateSubnet1d:
+    Value: !Ref PrivateSubnet1d
+    Export:
+      Name: PrivateSubnet1d
+  SecurityGroupForLambda:
+    Value: !GetAtt SecurityGroupForLambda.GroupId
+    Export:
+      Name: SecurityGroupForLambdaGroupId
+  SecurityGroupForRDSProxy:
+    Value: !GetAtt SecurityGroupForRDSProxy.GroupId
+    Export:
+      Name: SecurityGroupForRDSProxyGroupId
+  SecurityGroupForRDS:
+    Value: !GetAtt SecurityGroupForRDS.GroupId
+    Export:
+      Name: SecurityGroupForRDSGroupId
+  ProxyTestRDSClusterHost:
+    Value: !GetAtt ProxyTestRDSCluster.Endpoint.Address
+    Export:
+      Name: ProxyTestRDSClusterHost

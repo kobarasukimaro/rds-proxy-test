@@ -1,0 +1,32 @@
+{
+  "Parameters": [
+    {
+      "ParameterKey": "VpcCidrBlock",
+      "ParameterValue": "10.34.0.0/16"
+    },
+    {
+      "ParameterKey": "VpcSubnetCidrBlock1a",
+      "ParameterValue": "10.34.1.0/24"
+    },
+    {
+      "ParameterKey": "VpcSubnetCidrBlock1c",
+      "ParameterValue": "10.34.2.0/24"
+    },
+    {
+      "ParameterKey": "VpcSubnetCidrBlock1d",
+      "ParameterValue": "10.34.3.0/24"
+    },
+    {
+      "ParameterKey": "RDSDBName",
+      "ParameterValue": "proxytestdb"
+    },
+    {
+      "ParameterKey": "RDSMasterUsername",
+      "ParameterValue": "proxytest"
+    },
+    {
+      "ParameterKey": "RDSPassword",
+      "ParameterValue": ""
+    }
+  ]
+}
