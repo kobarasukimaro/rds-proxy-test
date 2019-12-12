@@ -6,9 +6,6 @@ provider:
   runtime: python3.7
   timeout: 60
   memorySize: 128
-  stackTags:
-    Owner: ${file(./conf/${self:provider.stage}.yml):OWNER}
-    PJCD: ${file(./conf/${self:provider.stage}.yml):PJCD}
   iamRoleStatements:
     - Effect: "Allow"
       Action:
